@@ -1,75 +1,48 @@
+import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib
-from matplotlib import font_manager
+from src.data_io import load_data
+from src.data_check import split_summary, check_negative_pay_status
 
-def split_summary(df: pd.DataFrame) -> pd.DataFrame:
-    """按 split 列统计各数据集的基本信息。"""
-    required_columns = ["split", "default_next_month", "record_id"]
-    missing_columns = [col for col in required_columns if col not in df.columns]
-    if missing_columns:
-        raise ValueError(f"数据缺少必要的列: {', '.join(missing_columns)}")
+st.set_page_config(page_title="数据概览", layout="wide")
+st.title("数据概览")
 
-    summary = []
-    for split_name, group in df.groupby("split", dropna=False):
-        sample_count = len(group)
-        default_rate = group["default_next_month"].mean()
-        missing_count = int(group.isna().sum().sum())
-        duplicate_count = int(group["record_id"].duplicated().sum())
-        summary.append({
-            "数据集": split_name,
-            "样本量": sample_count,
-            "违约率": default_rate,
-            "缺失值数": missing_count,
-            "record_id重复数": duplicate_count,
-        })
+try:
+    df = load_data("data/01_credit_default.csv")
+    
+    # 1. 统计卡片
+    st.subheader("数据集统计指标")
+    summary_df = split_summary(df)
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("训练集样本量", f"{len(df[df['split']=='train']):,}")
+    with col2:
+        st.metric("验证集样本量", f"{len(df[df['split']=='valid']):,}")
+    with col3:
+        st.metric("测试集样本量", f"{len(df[df['split']=='test']):,}")
+    with col4:
+        st.metric("缺失值总数", f"{int(df.isna().sum().sum())}")
 
-    result = pd.DataFrame(summary)
-    return result
+    # 2. 详细表格
+    st.subheader("各数据集详细统计")
+    st.dataframe(summary_df, use_container_width=True)
 
-def plot_distributions(df: pd.DataFrame) -> list:
-    """绘制特征分布图（全英文标签，避免云端乱码）。"""
-    figures = []
+    # 3. 特征分布（直接使用 Streamlit 原生图表，彻底告别方块乱码！）
+    st.subheader("特征分布")
+    
+    tab1, tab2, tab3 = st.tabs(["授信额度分布", "年龄分布", "还款状态分布"])
+    
+    with tab1:
+        st.bar_chart(df["credit_limit_ntd"].value_counts().sort_index(), x_label="Credit Limit", y_label="Count")
+        
+    with tab2:
+        st.bar_chart(df["age_years"].value_counts().sort_index(), x_label="Age", y_label="Count")
+        
+    with tab3:
+        st.bar_chart(df["pay_status_2005_09"].value_counts().sort_index(), x_label="Pay Status Code", y_label="Count")
 
-    # 图一：信用额度分布
-    fig1, ax1 = plt.subplots(figsize=(8, 5))
-    ax1.hist(df["credit_limit_ntd"].dropna(), bins=30, edgecolor="black", alpha=0.75, label="Count")
-    ax1.set_xlabel("Credit Limit (NTD)")
-    ax1.set_ylabel("Count")
-    ax1.set_title("Credit Limit Distribution")
-    ax1.legend()
-    fig1.tight_layout()
-    figures.append(fig1)
+    st.info("说明：还款状态中的 -2、-1、0 是编码，不是缺失值，本项目保留原始编码不填充。")
+    st.warning("相关性不等于因果关系，本项目仅作教学分析。")
 
-    # 图二：年龄分布
-    fig2, ax2 = plt.subplots(figsize=(8, 5))
-    ax2.hist(df["age_years"].dropna(), bins=30, edgecolor="black", alpha=0.75, label="Count")
-    ax2.set_xlabel("Age (Years)")
-    ax2.set_ylabel("Count")
-    ax2.set_title("Age Distribution")
-    ax2.legend()
-    fig2.tight_layout()
-    figures.append(fig2)
-
-    # 图三：还款状态柱状图
-    fig3, ax3 = plt.subplots(figsize=(8, 5))
-    status = df["pay_status_2005_09"].dropna()
-    counts = status.value_counts().sort_index()
-    ax3.bar(counts.index.astype(str), counts.values, edgecolor="black", alpha=0.75, label="Count")
-    ax3.set_xlabel("Pay Status Code")
-    ax3.set_ylabel("Count")
-    ax3.set_title("Pay Status Distribution (2005-09)")
-    ax3.legend()
-    fig3.tight_layout()
-    figures.append(fig3)
-
-    return figures
-
-def check_negative_pay_status(df: pd.DataFrame) -> dict:
-    """统计所有 pay_status 列中的负值数量。"""
-    pay_status_cols = [col for col in df.columns if "pay_status" in col]
-    result = {}
-    for col in pay_status_cols:
-        neg_count = int((df[col] < 0).sum())
-        result[col] = neg_count
-    return result
+except Exception as e:
+    st.error(f"数据加载或处理失败: {e}")
