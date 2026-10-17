@@ -91,9 +91,9 @@ def plot_distributions(df):
         alpha=0.75,
         label="信用额度",
     )
-    ax1.set_xlabel("信用额度（新台币）")
-    ax1.set_ylabel("样本数量")
-    ax1.set_title("信用额度分布")
+    ax1.set_xlabel("Credit Limit")
+    ax1.set_ylabel("Count")
+    ax1.set_title("Credit Limit Distribution")
     ax1.legend()
     fig1.tight_layout()
     figures.append(fig1)
@@ -105,11 +105,11 @@ def plot_distributions(df):
         bins=30,
         edgecolor="black",
         alpha=0.75,
-        label="年龄",
+        label="Age",
     )
-    ax2.set_xlabel("年龄（岁）")
-    ax2.set_ylabel("样本数量")
-    ax2.set_title("年龄分布")
+    ax2.set_xlabel("Age")
+    ax2.set_ylabel("Count")
+    ax2.set_title("Age Distribution")
     ax2.legend()
     fig2.tight_layout()
     figures.append(fig2)
@@ -126,10 +126,10 @@ def plot_distributions(df):
         counts.values,
         edgecolor="black",
         alpha=0.75,
-        label="样本数量",
+        label="Count",
     )
-    ax3.set_xlabel("还款状态")
-    ax3.set_ylabel("样本数量")
+    ax3.set_xlabel("Pay Status Distribution")
+    ax3.set_ylabel("Count")
     ax3.set_title("2005年9月还款状态分布")
     ax3.legend()
     fig3.tight_layout()
